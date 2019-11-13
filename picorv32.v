@@ -354,8 +354,8 @@ module picorv32 #(
 	always @* begin
 		pcpi_int_wr = 0;
 		pcpi_int_rd = 32'bx;
-		pcpi_int_wait  = |{ENABLE_PCPI && pcpi_wait,  (ENABLE_MUL || ENABLE_FAST_MUL) && pcpi_mul_wait,  ENABLE_DIV && pcpi_div_wait};
-		pcpi_int_ready = |{ENABLE_PCPI && pcpi_ready, (ENABLE_MUL || ENABLE_FAST_MUL) && pcpi_mul_ready, ENABLE_DIV && pcpi_div_ready};
+		pcpi_int_wait  = |{ENABLE_PCPI && pcpi_wait,  (ENABLE_MUL || ENABLE_FAST_MUL) && pcpi_mul_wait,  ENABLE_DIV && pcpi_div_wait,  ENABLE_POP && pcpi_pop_wait};
+		pcpi_int_ready = |{ENABLE_PCPI && pcpi_ready, (ENABLE_MUL || ENABLE_FAST_MUL) && pcpi_mul_ready, ENABLE_DIV && pcpi_div_ready, ENABLE_POP && pcpi_pop_ready};
 
 		(* parallel_case *)
 		case (1'b1)
@@ -371,9 +371,12 @@ module picorv32 #(
 				pcpi_int_wr = pcpi_div_wr;
 				pcpi_int_rd = pcpi_div_rd;
 			end
+			ENABLE_POP && pcpi_pop_ready: begin
+				pcpi_int_wr = pcpi_pop_wr;
+				pcpi_int_rd = pcpi_pop_rd;
+			end
 		endcase
 	end
-
 
 	// Memory Interface
 
@@ -2865,9 +2868,13 @@ module picorv32_pcpi_pop #(
 	);
 
 	always @(posedge clk) begin
-		if (resetn && pcpi_valid && pcpi_insn[6:0] == 7'b0000110 && pcpi_insn[14:12] == 3'b000 && pcpi_insn[31:25] == 7'b0001011) begin
+			pcpi_ready <= 0;
+			pcpi_wr <= 0;
+			pcpi_rd <= 'bx;
+
+		if (resetn && pcpi_valid && pcpi_insn[6:0] == 7'b0001011 && pcpi_insn[14:12] == 3'b000 && pcpi_insn[31:25] == 7'b0000110) begin
+			dbg_pop <= 1;
 			pcpi_rd <= result;
-			pcpi_wr <= 1;
 			pcpi_ready <= 1;
 		end
 	end
