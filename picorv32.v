@@ -75,7 +75,8 @@ module picorv32 #(
 	parameter [ 0:0] COMPRESSED_ISA = 0,
 	parameter [ 0:0] CATCH_MISALIGN = 1,
 	parameter [ 0:0] CATCH_ILLINSN = 1,
-	parameter [ 0:0] ENABLE_PCPI = 0,
+	parameter [ 0:0] ENABLE_PCPI = 1,
+	parameter [ 0:0] ENABLE_POP = 1,
 	parameter [ 0:0] ENABLE_MUL = 0,
 	parameter [ 0:0] ENABLE_FAST_MUL = 0,
 	parameter [ 0:0] ENABLE_DIV = 0,
@@ -257,6 +258,11 @@ module picorv32 #(
 
 	// Internal PCPI Cores
 
+	wire        pcpi_pop_wr;
+	wire [31:0] pcpi_pop_rd;
+	wire        pcpi_pop_wait;
+	wire        pcpi_pop_ready;
+
 	wire        pcpi_mul_wr;
 	wire [31:0] pcpi_mul_rd;
 	wire        pcpi_mul_wait;
@@ -272,18 +278,25 @@ module picorv32 #(
 	reg        pcpi_int_wait;
 	reg        pcpi_int_ready;
 
-	picorv32_pcpi_pop pcpi_pop (
+	generate if (ENABLE_POP) begin
+		picorv32_pcpi_pop pcpi_pop (
 			.clk       (clk            ),
 			.resetn    (resetn         ),
 			.pcpi_valid(pcpi_valid     ),
 			.pcpi_insn (pcpi_insn      ),
 			.pcpi_rs1  (pcpi_rs1       ),
 			.pcpi_rs2  (pcpi_rs2       ),
-			.pcpi_wr   (pcpi_mul_wr    ),
-			.pcpi_rd   (pcpi_mul_rd    ),
-			.pcpi_wait (pcpi_mul_wait  ),
-			.pcpi_ready(pcpi_mul_ready )
+			.pcpi_wr   (pcpi_pop_wr    ),
+			.pcpi_rd   (pcpi_pop_rd    ),
+			.pcpi_wait (pcpi_pop_wait  ),
+			.pcpi_ready(pcpi_pop_ready )
 	);
+	end else begin
+		assign pcpi_pop_wr = 0;
+		assign pcpi_pop_rd = 32'bx;
+		assign pcpi_pop_wait = 0;
+		assign pcpi_pop_ready = 0;
+	end endgenerate
 
 	generate if (ENABLE_FAST_MUL) begin
 		picorv32_pcpi_fast_mul pcpi_mul (
@@ -2536,7 +2549,8 @@ module picorv32_axi #(
 	parameter [ 0:0] COMPRESSED_ISA = 0,
 	parameter [ 0:0] CATCH_MISALIGN = 1,
 	parameter [ 0:0] CATCH_ILLINSN = 1,
-	parameter [ 0:0] ENABLE_PCPI = 0,
+	parameter [ 0:0] ENABLE_PCPI = 1,
+	parameter [ 0:0] ENABLE_POP = 1,
 	parameter [ 0:0] ENABLE_MUL = 0,
 	parameter [ 0:0] ENABLE_FAST_MUL = 0,
 	parameter [ 0:0] ENABLE_DIV = 0,
@@ -2668,6 +2682,7 @@ module picorv32_axi #(
 		.CATCH_MISALIGN      (CATCH_MISALIGN      ),
 		.CATCH_ILLINSN       (CATCH_ILLINSN       ),
 		.ENABLE_PCPI         (ENABLE_PCPI         ),
+		.ENABLE_POP          (ENABLE_POP          ),
 		.ENABLE_MUL          (ENABLE_MUL          ),
 		.ENABLE_FAST_MUL     (ENABLE_FAST_MUL     ),
 		.ENABLE_DIV          (ENABLE_DIV          ),
@@ -2981,7 +2996,7 @@ module picorv32_pcpi_pop #(
 	output reg        pcpi_wait,
 	output reg        pcpi_ready
 );
-	reg [31:0] result;
+	wire [31:0] result;
 
 	Popcount32_CombCFU #(
 		.CFU_FUNCTION_ID_W      (1),
@@ -2991,22 +3006,18 @@ module picorv32_pcpi_pop #(
 		.CFU_RESP_DATA_W        (CFU_RESP_DATA_W)
 	) pc (
 		.req_function_id        (1'b0),
-		.req_data               (req_rs1),
+		.req_data               (pcpi_rs1),
 		.resp_data              (result)
 	);
 
 	always @(posedge clk) begin
-		if (resetn) begin
-			if (pcpi_insn[14:12]) begin
-				pcpi_rd <= result;
-				pcpi_wr <= 1;
-				pcpi_ready <= 1;
-			end
+		if (resetn && pcpi_valid && pcpi_insn[6:0] == 7'b0000110 && pcpi_insn[14:12] == 3'b000 && pcpi_insn[31:25] == 7'b0001011) begin
+			pcpi_rd <= result;
+			pcpi_wr <= 1;
+			pcpi_ready <= 1;
 		end
 	end
-
 endmodule
-
 
 // Level-0 (Combinational) 32b popcount CFU
 //
@@ -3103,7 +3114,8 @@ module picorv32_wb #(
 	parameter [ 0:0] COMPRESSED_ISA = 0,
 	parameter [ 0:0] CATCH_MISALIGN = 1,
 	parameter [ 0:0] CATCH_ILLINSN = 1,
-	parameter [ 0:0] ENABLE_PCPI = 0,
+	parameter [ 0:0] ENABLE_PCPI = 1,
+	parameter [ 0:0] ENABLE_POP = 1,
 	parameter [ 0:0] ENABLE_MUL = 0,
 	parameter [ 0:0] ENABLE_FAST_MUL = 0,
 	parameter [ 0:0] ENABLE_DIV = 0,
@@ -3201,6 +3213,7 @@ module picorv32_wb #(
 		.CATCH_MISALIGN      (CATCH_MISALIGN      ),
 		.CATCH_ILLINSN       (CATCH_ILLINSN       ),
 		.ENABLE_PCPI         (ENABLE_PCPI         ),
+		.ENABLE_POP          (ENABLE_POP          ),
 		.ENABLE_MUL          (ENABLE_MUL          ),
 		.ENABLE_FAST_MUL     (ENABLE_FAST_MUL     ),
 		.ENABLE_DIV          (ENABLE_DIV          ),

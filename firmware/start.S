@@ -479,6 +479,8 @@ start:
 	jal ra,stats
 #endif
 
+	picorv32_pop(t3, t4)
+
 	/* print "DONE\n" */
 	lui a0,0x10000000>>12
 	addi a1,zero,'D'
