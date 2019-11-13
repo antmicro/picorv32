@@ -2836,7 +2836,7 @@ module picorv32_axi_adapter (
 endmodule
 
 /***************************************************************
- * picorv32_wb
+ * picorv32_pop (CFU)
  ***************************************************************/
 
 module picorv32_pcpi_pop #(
@@ -2879,6 +2879,11 @@ module picorv32_pcpi_pop #(
 		end
 	end
 endmodule
+
+/*****************************************************************************
+ * Copied from:
+ * https://github.com/grayresearch/CFU/blob/master/popcount.v
+ */
 
 // Level-0 (Combinational) 32b popcount CFU
 //
@@ -2959,6 +2964,7 @@ module C63(
         endcase
     end
 endmodule
+
 /***************************************************************
  * picorv32_wb
  ***************************************************************/
