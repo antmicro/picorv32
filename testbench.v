@@ -51,10 +51,6 @@ module testbench #(
 		end
 	end
 
-	initial begin
-		$display("Testing picorv32 with Icarus using picorv wrapper");
-	end
-
 	picorv32_wrapper #(
 		.AXI_TEST (AXI_TEST),
 		.VERBOSE  (VERBOSE)
