@@ -479,6 +479,7 @@ start:
 	jal ra,stats
 #endif
 
+	/* custom instruction for CFU */
 	picorv32_pop(t3, t4)
 
 	/* print "DONE\n" */
@@ -537,6 +538,7 @@ hard_remu:
 	remu a0, a0, a1
 	ret
 
-/* Custom functions */
+/* Function used to validate the hex of custom instruction */
+
 custom_pop:
 	picorv32_pop(a0, a1)
